@@ -1,0 +1,40 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  MAVEN_OPTS: '-Dmaven.repo.local=$(Pipeline.Workspace)/.m2/repository'
+
+steps:
+- task: JavaToolInstaller@0
+  inputs:
+    versionSpec: '21'
+    jdkArchitectureOption: 'x64'
+    jdkSourceOption: 'PreInstalled'
+
+- task: Maven@4
+  inputs:
+    mavenPomFile: 'pom.xml'
+    mavenOptions: '-Xmx3072m'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: 'default'
+    goals: 'clean test'
+    options: '-Psmoke -Dheadless=true -Denv=qa'
+    publishJUnitResults: true
+    testResultsFiles: '**/surefire-reports/TEST-*.xml'
+
+- task: PublishHtmlReport@1
+  displayName: 'Publish Execution Reports'
+  condition: always()
+  inputs:
+    reportDir: 'reports'
+    tabName: 'QA Test Reports'
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Screenshots & Logs'
+  condition: always()
+  inputs:
+    targetPath: '$(System.DefaultWorkingDirectory)/reports'
+    artifactName: 'TestReportsAndScreenshots'
